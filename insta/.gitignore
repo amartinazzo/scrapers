@@ -1,0 +1,8 @@
+__pycache__/*
+*.checkpoint
+*.csv
+*.json
+*.log
+*.txt
+*.zip
+userinfo
