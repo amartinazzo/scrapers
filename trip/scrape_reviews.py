@@ -48,19 +48,14 @@ for key in restaurants:
 
     nr_reviews = driver.find_elements(By.XPATH, "//label[@class='label container cx_brand_refresh_phase2']")
     nr_reviews = nr_reviews[1].text.split("(")[1][:-1].replace(".", "")
-
-    pages = driver.find_elements(By.XPATH, "//a[@class='pageNum last   cx_brand_refresh_phase2']")
-    pages = int(pages[-1].text) - 1
-    
-    print(f"{title}; #{ranking} em SP; {pages} pages; {nr_reviews} reviews")
  
     pages = driver.find_elements(By.XPATH, "//a[@class='pageNum last   cx_brand_refresh_phase2']")
     pages = pages[-1].text
-    
-    print(f"{title}; #{ranking} em SP; {pages} pages")
+
+    print(f"{title}; #{ranking} em SP; {pages} pages; {nr_reviews} reviews")
  
     # read reviews
-    cnt = 1
+    cnt = 0
     while True:
         while True:
             try:
