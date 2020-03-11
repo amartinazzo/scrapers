@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.remote.remote_connection import LOGGER
-from time import sleep
+from time import sleep, time
 
 
 base_url = "http://www.tripadvisor.com.br/Restaurant_Review-g303631-d{}-or0"
@@ -16,6 +16,8 @@ output_dir = "reviews"
 
 restaurants = pd.read_csv(profiles_file, comment="#", header=None)
 restaurants = dict(zip(restaurants[0].values, restaurants[1].values))
+
+timestamp = int(time())
 
 # proxies = RequestProxy().get_proxy_list()
 # PROXY = proxies[0].get_address()
@@ -33,7 +35,7 @@ driver = webdriver.Firefox(options=options)
 sleep(2)
 
 for key in restaurants:
-    f = open(os.path.join(output_dir, f"{key}.csv"), "w", encoding="utf-8")
+    f = open(os.path.join(output_dir, f"{key}_{timestamp}.csv"), "w", encoding="utf-8")
     fwriter = csv.writer(f)
 
     driver.get(base_url.format(str(restaurants[key])))
@@ -57,14 +59,12 @@ for key in restaurants:
     # read reviews
     cnt = 0
     while True:
-        while True:
-            try:
-                more_button = driver.find_element(By.XPATH, "//span[@class='taLnk ulBlueLinks']")
-                if more_button.text == "Mais":
-                    more_button.click()
-                break
-            except:
-                pass
+        try:
+            more_button = driver.find_element(By.XPATH, "//span[@class='taLnk ulBlueLinks']")
+            if more_button is not None and more_button.text == "Mais":
+                more_button.click()
+        except:
+            pass
                 
         sleep(3)
         print(cnt)
@@ -91,10 +91,10 @@ for key in restaurants:
             
         # paginate
         next_button = driver.find_elements(By.XPATH, "//a[@class='nav next ui_button primary  cx_brand_refresh_phase2']")
-        if cnt==pages:
+        if len(next_button)==0:
             print("")
             f.close()
             break
         next_button[0].click()
         cnt = cnt+1
-        sleep(5)
+        sleep(3)
