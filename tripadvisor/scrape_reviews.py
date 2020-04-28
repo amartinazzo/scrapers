@@ -11,19 +11,22 @@ from time import sleep, time
 
 
 base_url = "http://www.tripadvisor.com.br/Restaurant_Review-g303631-d{}-or0"
-profiles_file = "restaurants.csv"
-output_dir = "reviews"
+input_file = "tripadvisor.csv"
+output_file = "tripadvisor_metadata.csv"
+output_dir = "tripadvisor"
 
-restaurants = pd.read_csv(profiles_file, comment="#", header=None)
-restaurants = dict(zip(restaurants[0].values, restaurants[1].values))
+restaurants = pd.read_csv(input_file, comment="#")
+restaurants.fillna(0, inplace=True)
+restaurants = dict(zip(restaurants["restaurant"].values, restaurants["id"].values.astype(int)))
+
+restaurants_read = pd.read_csv(output_file, comment="#")
+restaurants_read = restaurants_read["id"].values
 
 timestamp = int(time())
 
-# proxies = RequestProxy().get_proxy_list()
-# PROXY = proxies[0].get_address()
 # webdriver.DesiredCapabilities.FIREFOX['proxy']={
-#     "httpProxy":PROXY,
-#     "proxyType":"MANUAL",
+#     "httpProxy": os.environ["PROXY"],
+#     "proxyType": "MANUAL",
 # }
 
 LOGGER.setLevel(logging.WARNING)
@@ -35,26 +38,49 @@ driver = webdriver.Firefox(options=options)
 sleep(2)
 
 for key in restaurants:
-    f = open(os.path.join(output_dir, f"{key}_{timestamp}.csv"), "w", encoding="utf-8")
-    fwriter = csv.writer(f)
+    if restaurants[key]==0:
+        print("skipping", key)
+        continue
 
     driver.get(base_url.format(str(restaurants[key])))
     
-    sleep(10)
+    sleep(5)
     
     title = driver.find_element(By.XPATH, "//h1[@class='ui_header h1']")
     title = title.text
     
-    ranking = driver.find_element(By.XPATH, "//span[@class='header_popularity popIndexValidation']")
-    ranking = ranking.text.split(" ")[1]
+    ranking = driver.find_elements(By.XPATH, "//span[@class='header_popularity popIndexValidation']")
+    ranking = ranking[0].text.split(" ")[1] if len(ranking)>0 else 0
 
     nr_reviews = driver.find_elements(By.XPATH, "//label[@class='label container cx_brand_refresh_phase2']")
     nr_reviews = nr_reviews[1].text.split("(")[1][:-1].replace(".", "")
  
     pages = driver.find_elements(By.XPATH, "//a[@class='pageNum last   cx_brand_refresh_phase2']")
-    pages = pages[-1].text
+    pages = pages[-1].text if len(pages)>0 else 1
 
-    print(f"{title}; #{ranking} em SP; {pages} pages; {nr_reviews} reviews")
+    reinvindicado = driver.find_elements(By.XPATH, "//div[contains(@class, 'restaurants-claimed-badge-ClaimedBadge__container--32Ufv')]")
+    reinvindicado = reinvindicado[0].text
+
+    address = driver.find_element(By.XPATH, "//span[@class='detail  ui_link level_4']")
+    address = address.text
+
+    headers = driver.find_elements(By.XPATH, "//div[@class='header_links']")
+    headers = headers[0].text.split(",")
+
+    price = headers[0]
+    tags = ";".join(headers[1:])
+
+    print(f"{title}; #{ranking} em SP; {pages} pages; {nr_reviews}")
+
+    with open(output_file, "a", encoding="utf-8") as f_meta:
+        fwriter_meta = csv.writer(f_meta)
+        fwriter_meta.writerow([title, str(restaurants[key]), ranking, nr_reviews, reinvindicado, price, tags, address])
+
+    if restaurants[key] in restaurants_read:
+        continue
+
+    f = open(os.path.join(output_dir, f"{key}_{timestamp}.csv"), "w", encoding="utf-8")
+    fwriter = csv.writer(f)
  
     # read reviews
     cnt = 0
